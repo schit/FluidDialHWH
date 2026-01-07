@@ -182,8 +182,101 @@ static int side_button_line() {
     return round_display ? PUSH_BUTTON_LINE : DIAL_BUTTON_LINE;
 }
 
+static const char* safe_cstr(const char* s) {
+    return s ? s : "";
+}
+
+// Most scenes call drawButtonLegends() right before refreshDisplay().
+// For CYD builds with physical buttons, we draw those legends into the
+// reserved "button strip" area (outside the square canvas).
+static char legend_red[40]    = { 0 };
+static char legend_green[40]  = { 0 };
+static char legend_orange[40] = { 0 };
+
+static void set_legend(char* dst, size_t dst_size, const char* src) {
+    if (dst_size == 0) {
+        return;
+    }
+    const char* s = safe_cstr(src);
+    strncpy(dst, s, dst_size - 1);
+    dst[dst_size - 1] = '\0';
+}
+
+static bool has_button_strip() {
+    return (display.width() > canvas.width()) || (display.height() > canvas.height());
+}
+
+static void draw_cyd_button_strip_legends() {
+#if defined(CYD_BUTTONS)
+    if (round_display || !has_button_strip()) {
+        return;
+    }
+
+    // Compute the strip rectangle as the area not covered by the canvas sprite.
+    int strip_x = 0;
+    int strip_y = 0;
+    int strip_w = 0;
+    int strip_h = 0;
+
+    if (display.height() > canvas.height()) {
+        strip_w = display.width();
+        strip_h = display.height() - canvas.height();
+        strip_x = 0;
+        strip_y = (sprite_offset.y == 0) ? canvas.height() : 0;
+    } else if (display.width() > canvas.width()) {
+        strip_w = display.width() - canvas.width();
+        strip_h = display.height();
+        strip_x = (sprite_offset.x == 0) ? canvas.width() : 0;
+        strip_y = 0;
+    } else {
+        return;
+    }
+
+    // Clear strip and draw three centered labels aligned with the three buttons.
+    display.fillRect(strip_x, strip_y, strip_w, strip_h, BLACK);
+
+    display.setFont(&fonts::FreeSansBold9pt7b);
+    display.setTextDatum(middle_center);
+
+    const bool horizontal = strip_w >= strip_h;
+    const int  seg_len    = horizontal ? strip_w : strip_h;
+    const int  seg0       = seg_len / 6;
+    const int  seg1       = seg_len / 2;
+    const int  seg2       = (seg_len * 5) / 6;
+    const int  mid_other  = (horizontal ? strip_h : strip_w) / 2;
+
+    auto draw_seg = [&](int seg_center, const char* text, uint16_t color) {
+        if (!text || !*text) {
+            return;
+        }
+        display.setTextColor(color);
+        if (horizontal) {
+            display.drawString(text, strip_x + seg_center, strip_y + mid_other);
+        } else {
+            display.drawString(text, strip_x + mid_other, strip_y + seg_center);
+        }
+    };
+
+    // Button order matches switch_button_touched(): 0=red, 1=dial(yellow), 2=green
+    draw_seg(seg0, legend_red, RED);
+    draw_seg(seg1, legend_orange, ORANGE);
+    draw_seg(seg2, legend_green, GREEN);
+#endif
+}
+
 // This shows on the display what the button currently do.
 void drawButtonLegends(const char* red, const char* green, const char* orange) {
+    set_legend(legend_red, sizeof(legend_red), red);
+    set_legend(legend_green, sizeof(legend_green), green);
+    set_legend(legend_orange, sizeof(legend_orange), orange);
+
+#if defined(CYD_BUTTONS)
+    // For CYD with physical buttons, render legends in the strip (outside canvas).
+    if (!round_display && has_button_strip()) {
+        return;
+    }
+#endif
+
     text(red, round_display ? 50 : 10, side_button_line(), RED, TINY, middle_left);
     text(green, display_short_side() - (round_display ? 50 : 10), side_button_line(), GREEN, TINY, middle_right);
     centered_text(orange, DIAL_BUTTON_LINE, ORANGE);
@@ -270,6 +363,7 @@ void drawMenuTitle(const char* name) {
 void refreshDisplay() {
     display.startWrite();
     canvas.pushSprite(sprite_offset.x, sprite_offset.y);
+    draw_cyd_button_strip_legends();
     display.endWrite();
 }
 

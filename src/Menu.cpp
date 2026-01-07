@@ -106,6 +106,11 @@ void Menu::removeAllItems() {
 void Menu::reDisplay() {
     menuBackground();
     show_items();
+    // Menus that use the base Menu::reDisplay() (notably PieMenu) do not
+    // otherwise set button legends. On CYD builds with physical buttons,
+    // this ensures the strip is updated and does not keep stale legends
+    // from previous scenes (e.g. About->Layout).
+    drawButtonLegends("", "", "Select");
     refreshDisplay();
 }
 void Menu::rotate(int delta) {

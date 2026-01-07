@@ -503,8 +503,14 @@ void show_logo() {
 }
 
 void base_display() {
+    // On CYD builds with physical buttons, don't draw on-screen buttons.
+    // That reserved strip is used for dynamic button-function labels.
+#ifdef CYD_BUTTONS
+    display.fillRect(layout->buttonsXY.x, layout->buttonsXY.y, layout->buttonsWH.x, layout->buttonsWH.y, BLACK);
+#else
     initButtons();
     redrawButtons();
+#endif
 }
 void next_layout(int delta) {
     layout_num += delta;
@@ -577,7 +583,9 @@ bool ui_locked() {
     bool locked = digitalRead(lockout_pin);
     if ((int)locked != last_locked) {
         last_locked = locked;
+#ifndef CYD_BUTTONS
         redrawButtons();
+#endif
     }
     return locked;
 }
@@ -589,15 +597,18 @@ bool in_button_stripe(Point xy) {
     return in_rect(xy, layout->buttonsXY, layout->buttonsWH);
 }
 bool screen_button_touched(bool pressed, int x, int y, int& button) {
-    // If physical buttons are present, ignore on-screen button touches.
-    if (red_button_pin != -1 || dial_button_pin != -1 || green_button_pin != -1) {
-        return false;
-    }
-
     Point xy(x, y);
     if (!in_button_stripe(xy)) {
         return false;
     }
+
+    // If physical buttons are present, swallow touches in the strip so they
+    // don't interact with the main UI.
+    if (red_button_pin != -1 || dial_button_pin != -1 || green_button_pin != -1) {
+        button = 99;
+        return true;
+    }
+
     xy -= layout->buttonsXY;
     for (int i = 0; i < n_buttons; i++) {
         if (in_rect(xy, layout->buttonOffset(i), button_wh)) {
