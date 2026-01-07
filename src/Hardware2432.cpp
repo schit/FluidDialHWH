@@ -154,6 +154,21 @@ int red_button_pin   = -1;
 int dial_button_pin  = -1;
 int green_button_pin = -1;
 
+// Optional overrides for physical button wiring on CYD builds.
+// Defaults follow the original CYD_Dial wiring (RGB LED pins):
+//   Red=GPIO4, Yellow(Dial)=GPIO17, Green=GPIO16
+// You can override from platformio.ini with e.g.
+//   -DCYD_RED_BUTTON_PIN=4 -DCYD_DIAL_BUTTON_PIN=16 -DCYD_GREEN_BUTTON_PIN=17
+#ifndef CYD_RED_BUTTON_PIN
+#    define CYD_RED_BUTTON_PIN GPIO_NUM_4
+#endif
+#ifndef CYD_DIAL_BUTTON_PIN
+#    define CYD_DIAL_BUTTON_PIN GPIO_NUM_17
+#endif
+#ifndef CYD_GREEN_BUTTON_PIN
+#    define CYD_GREEN_BUTTON_PIN GPIO_NUM_16
+#endif
+
 int enc_a, enc_b;
 
 #ifdef CAPACITIVE_CYD
@@ -185,9 +200,9 @@ void init_capacitive_cyd() {
     // rotary_button_pin = GPIO_NUM_35;
     // pinMode(rotary_button_pin, INPUT);  // Pullup does not work on GPIO35
 
-    red_button_pin   = GPIO_NUM_4;   // RGB LED Red
-    dial_button_pin  = GPIO_NUM_17;  // RGB LED Blue
-    green_button_pin = GPIO_NUM_16;  // RGB LED Green
+    red_button_pin   = CYD_RED_BUTTON_PIN;
+    dial_button_pin  = CYD_DIAL_BUTTON_PIN;
+    green_button_pin = CYD_GREEN_BUTTON_PIN;
     pinMode(red_button_pin, INPUT_PULLUP);
     pinMode(dial_button_pin, INPUT_PULLUP);
     pinMode(green_button_pin, INPUT_PULLUP);
@@ -223,12 +238,19 @@ void init_resistive_cyd() {
 
     setBacklightPin(GPIO_NUM_21);
 
+    pinMode(lockout_pin, INPUT);
+
     enc_a = GPIO_NUM_22;
     enc_b = GPIO_NUM_27;
 #    ifdef CYD_BUTTONS
-    red_button_pin   = GPIO_NUM_4;   // RGB LED Red
-    dial_button_pin  = GPIO_NUM_17;  // RGB LED Blue
-    green_button_pin = GPIO_NUM_16;  // RGB LED Green
+    red_button_pin   = CYD_RED_BUTTON_PIN;
+    dial_button_pin  = CYD_DIAL_BUTTON_PIN;
+    green_button_pin = CYD_GREEN_BUTTON_PIN;
+
+    // If those pins are repurposed as physical buttons, use internal pullups.
+    pinMode(red_button_pin, INPUT_PULLUP);
+    pinMode(dial_button_pin, INPUT_PULLUP);
+    pinMode(green_button_pin, INPUT_PULLUP);
 #    else
     red_button_pin = dial_button_pin = green_button_pin = -1;
 #    endif
@@ -567,6 +589,11 @@ bool in_button_stripe(Point xy) {
     return in_rect(xy, layout->buttonsXY, layout->buttonsWH);
 }
 bool screen_button_touched(bool pressed, int x, int y, int& button) {
+    // If physical buttons are present, ignore on-screen button touches.
+    if (red_button_pin != -1 || dial_button_pin != -1 || green_button_pin != -1) {
+        return false;
+    }
+
     Point xy(x, y);
     if (!in_button_stripe(xy)) {
         return false;
