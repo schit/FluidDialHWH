@@ -7,6 +7,10 @@
 #include "AboutScene.h"
 #include "Ota.h"
 
+#if defined(ARDUINO) && (defined(ESP32) || defined(ARDUINO_ARCH_ESP32))
+#    include <esp_system.h>
+#endif
+
 extern void base_display();
 extern void show_logo();
 
@@ -17,10 +21,31 @@ extern AboutScene aboutScene;
 void setup() {
     init_system();
 
-    display.setBrightness(aboutScene.getBrightness());
+    int brightness = aboutScene.getBrightness();
+#if defined(ARDUINO) && (defined(ESP32) || defined(ARDUINO_ARCH_ESP32))
+    const esp_reset_reason_t reset_reason = esp_reset_reason();
+    if (reset_reason == ESP_RST_BROWNOUT) {
+        // Brownout usually means the supply sagged; reduce load so the unit can boot.
+        if (brightness > 32) {
+            brightness = 32;
+        }
+    }
+#endif
+
+    display.setBrightness(brightness);
 
     show_logo();
     delay_ms(2000);  // view the logo and wait for the debug port to connect
+
+#if defined(ARDUINO) && (defined(ESP32) || defined(ARDUINO_ARCH_ESP32))
+    if (esp_reset_reason() == ESP_RST_BROWNOUT) {
+        display.setTextColor(RED);
+        display.setTextDatum(top_left);
+        display.drawString("BROWNOUT (weak 5V)", 2, 2);
+        dbg_println("Reset reason: brownout");
+        delay_ms(500);
+    }
+#endif
 
     base_display();
 

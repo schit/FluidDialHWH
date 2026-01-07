@@ -4,6 +4,7 @@
 
 #    include <WiFi.h>
 #    include <ArduinoOTA.h>
+#    include <esp_system.h>
 
 // Optional secret header (gitignored). If present it should define
 // OTA_WIFI_SSID / OTA_WIFI_PASS / OTA_HOSTNAME (and optionally OTA_PASSWORD).
@@ -47,13 +48,19 @@ void ota_setup() {
         return;
     }
 
+    // If we just brownouted, avoid enabling WiFi immediately (it increases current draw).
+    if (esp_reset_reason() == ESP_RST_BROWNOUT) {
+        dbg_println("OTA: skipped due to brownout reset");
+        return;
+    }
+
     // If the user forgot to customize platformio.ini, don't stall boot.
     if (strcmp(ssid, "YOUR_WIFI_SSID") == 0) {
         return;
     }
 
     WiFi.mode(WIFI_STA);
-    WiFi.setSleep(false);
+    // Keep WiFi sleep enabled to reduce average current draw on marginal supplies.
 
     dbg_printf("OTA: connecting to WiFi SSID '%s'...\n", ssid);
     WiFi.begin(ssid, ota_pass());
