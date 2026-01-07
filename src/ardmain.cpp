@@ -5,6 +5,7 @@
 #include "FileParser.h"
 #include "Scene.h"
 #include "AboutScene.h"
+#include "Ota.h"
 
 extern void base_display();
 extern void show_logo();
@@ -25,6 +26,9 @@ void setup() {
 
     dbg_printf("FluidNC Pendant %s\n", git_info);
 
+    // Optional ArduinoOTA support (enabled only if OTA_WIFI_SSID is set at build time).
+    ota_setup();
+
     fnc_realtime(StatusReport);  // Kick FluidNC into action
 
     // init_file_list();
@@ -36,4 +40,5 @@ void setup() {
 void loop() {
     fnc_poll();         // Handle messages from FluidNC
     dispatch_events();  // Handle dial, touch, buttons
+    ota_loop();         // Handle OTA update requests (if enabled)
 }

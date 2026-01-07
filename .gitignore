@@ -5,3 +5,6 @@ src/version.*
 *~
 junk
 release
+
+# Local secrets (not committed)
+src/OtaSecrets.h
