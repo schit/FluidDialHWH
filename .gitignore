@@ -6,6 +6,8 @@ src/version.*
 junk
 release
 
-# Local secrets (not committed)
-src/OtaSecrets.h
+# Local overrides (not committed)
 platformio.local.ini
+
+# Local secrets (never commit)
+src/OtaSecrets.h

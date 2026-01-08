@@ -238,7 +238,14 @@ void init_resistive_cyd() {
         display.getPanel()->initTouch();
     }
 
+// On DEBUG_TO_USB builds, GPIO21 is used for the FluidNC UART TX pin
+// (see Hardware2432.hpp). Many CYD boards also route backlight to GPIO21,
+// so using it for both will break comms. Use the alternate backlight pin.
+#    ifdef DEBUG_TO_USB
+    setBacklightPin(GPIO_NUM_27);
+#    else
     setBacklightPin(GPIO_NUM_21);
+#    endif
 
     pinMode(lockout_pin, INPUT);
 
