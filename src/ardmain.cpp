@@ -6,6 +6,7 @@
 #include "Scene.h"
 #include "AboutScene.h"
 #include "Ota.h"
+#include "Diagnostics.h"
 
 #if defined(ARDUINO) && (defined(ESP32) || defined(ARDUINO_ARCH_ESP32))
 #    include <esp_system.h>
@@ -21,7 +22,10 @@ extern AboutScene aboutScene;
 void setup() {
     init_system();
 
-    int brightness = aboutScene.getBrightness();
+    diag_init();
+
+    const int pref_brightness = aboutScene.getBrightness();
+    int       brightness      = pref_brightness;
 #if defined(ARDUINO) && (defined(ESP32) || defined(ARDUINO_ARCH_ESP32))
     const esp_reset_reason_t reset_reason = esp_reset_reason();
     if (reset_reason == ESP_RST_BROWNOUT) {
@@ -31,6 +35,8 @@ void setup() {
         }
     }
 #endif
+
+    diag_note_brightness(pref_brightness, brightness);
 
     display.setBrightness(brightness);
 

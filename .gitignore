@@ -8,3 +8,4 @@ release
 
 # Local secrets (not committed)
 src/OtaSecrets.h
+platformio.local.ini

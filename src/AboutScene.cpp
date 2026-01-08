@@ -4,6 +4,8 @@
 #include "Scene.h"
 #include "FileParser.h"
 #include "AboutScene.h"
+#include "Ota.h"
+#include "Diagnostics.h"
 
 extern Scene menuScene;
 
@@ -107,6 +109,49 @@ void AboutScene::reDisplay() {
                 wifi_str += wifi_ip;
                 centered_text(wifi_str.c_str(), y += y_spacing, LIGHTGREY, TINY);
             }
+        }
+    }
+
+    // Pendant WiFi / OTA status (independent of FluidNC WiFi info above)
+    {
+        const char* otaStatus = ota_status_line();
+        const char* otaHost   = ota_hostname_value();
+        const char* otaIp     = ota_local_ip();
+
+        if (otaStatus && *otaStatus) {
+            centered_text(otaStatus, y += y_spacing, LIGHTGREY, TINY);
+        }
+
+        if (otaHost && *otaHost) {
+            std::string hostLine = "OTA host ";
+            hostLine += otaHost;
+            centered_text(hostLine.c_str(), y += y_spacing, LIGHTGREY, TINY);
+        }
+
+        if (otaIp && *otaIp) {
+            std::string ipLine = "OTA IP ";
+            ipLine += otaIp;
+            centered_text(ipLine.c_str(), y += y_spacing, LIGHTGREY, TINY);
+        }
+
+        const char* otaErr = ota_last_error();
+        if (otaErr && *otaErr) {
+            centered_text(otaErr, y += y_spacing, RED, TINY);
+        }
+    }
+
+    // Boot/reset diagnostics (brownout etc)
+    {
+        std::string resetLine = "Reset ";
+        resetLine += diag_reset_reason_str();
+        centered_text(resetLine.c_str(), y += y_spacing, (diag_reset_was_brownout() ? RED : LIGHTGREY), TINY);
+
+        if (diag_brightness_was_clamped()) {
+            std::string bLine = "Brightness clamped ";
+            bLine += std::to_string(diag_pref_brightness());
+            bLine += "->";
+            bLine += std::to_string(diag_applied_brightness());
+            centered_text(bLine.c_str(), y += y_spacing, RED, TINY);
         }
     }
 
