@@ -106,7 +106,9 @@ void setBacklightPin(uint8_t pinnum) {
     auto cfg   = light.config();
     cfg.pin_bl = pinnum;
     light.config(cfg);
-    light.init(255);
+    // Start with backlight off to reduce inrush current during boot.
+    // The app will set the desired brightness later.
+    light.init(0);
 }
 
 lgfx::Panel_ST7789  _panel_st7789;
@@ -461,6 +463,10 @@ void init_hardware() {
         init_panel_st7789();
     }
     display.init();
+
+    // Keep backlight off until the application chooses a brightness.
+    // This helps avoid brownout resets on weak 5V sources.
+    display.setBrightness(0);
 
     choose_board();
 
